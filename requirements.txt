@@ -1,0 +1,13 @@
+streamlit
+lancedb
+lance-namespace
+sentence-transformers
+torch
+torchvision
+ollama
+pillow
+requests
+beautifulsoup4
+sqlalchemy
+tqdm
+deprecation
