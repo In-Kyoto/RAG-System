@@ -6,7 +6,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-API_KEY = st.secrets["GROK_API_KEY"]
+API_KEY = st.secrets["GROQ_API_KEY"]
 
 
 st.set_page_config(page_title="RAG System", layout="wide")
