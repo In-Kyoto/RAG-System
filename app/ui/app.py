@@ -14,22 +14,46 @@ st.title("Multimodal RAG")
 
 def get_answer_from_llama(query, context):
     url = "https://api.groq.com/openai/v1/chat/completions"
+    model = "llama-3.1-8b-instant"  # або "llama-3.1-70b-versatile"
+    max_tokens = 512
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "Відповідай українською мовою, коротко і зрозуміло."},
+            {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
+        ],
+        "temperature": 0.7,
+        "max_tokens": max_tokens
+    }
+
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": "llama-3.1-8b-instant",
-        "messages": [
-            {"role": "system", "content": "Дай коротку зрозумілу відповідь українською мовою, максимум 250 слів."},
-            {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
-        ],
-        "temperature": 0.7,
-        "max_tokens": 500
-    }
 
-    response = requests.post(url, headers=headers, json=payload, timeout=25)
-    return response.json()["choices"][0]["message"]["content"]
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=20)
+
+        if response.status_code != 200:
+            error_text = response.text.replace("\n", " ")[:200]
+            return f"Groq помилка {response.status_code}: {error_text}"
+
+        data = response.json()
+
+        if "choices" in data and len(data["choices"]) > 0:
+            msg = data["choices"][0]
+            if "message" in msg and "content" in msg["message"]:
+                return msg["message"]["content"].strip()
+
+        return f"Невідомий формат відповіді від моделі:\n{str(data)[:500]}"
+
+    except requests.exceptions.Timeout:
+        return "Таймаут: модель не відповідає надто довго. Спробуй ще раз."
+    except requests.exceptions.ConnectionError:
+        return "Не вдалося підключитися до Groq. Перевір інтернет або статус https://status.groq.com"
+    except Exception as e:
+        return f"Невідома помилка: {str(e)}"
 
 @st.cache_resource
 def get_db_and_model():
