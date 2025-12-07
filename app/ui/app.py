@@ -73,9 +73,8 @@ if query:
             st.error("Нічого не знайдено")
             st.stop()
 
-        filtered_results = [r for r in results if r.get('_distance', 1.0) < 0.6]
 
-        best_article = min(filtered_results, key=lambda x: x.get("_distance", 1))
+        best_article = min(results, key=lambda x: x.get("_distance", 1))
 
         title = best_article.get("title", "Без назви")
         text = best_article.get("text", "")
