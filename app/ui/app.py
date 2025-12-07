@@ -1,29 +1,27 @@
 import streamlit as st
 import lancedb
 from sentence_transformers import SentenceTransformer
-import ollama
-from PIL import Image
 import requests
+from PIL import Image
 from io import BytesIO
 
 API_KEY = st.secrets["GROQ_API_KEY"]
 
-
-st.set_page_config(page_title="RAG System", layout="wide")
-st.title("Multimodal RAG")
+st.set_page_config(page_title="Multimodal RAG", layout="wide")
+st.title("Multimodal RAG System")
 
 def get_answer_from_llama(query, context):
     url = "https://api.groq.com/openai/v1/chat/completions"
-    model = "llama-3.1-8b-instant"  # або "llama-3.1-70b-versatile"
+    model = "llama-3.1-8b-instant"
     max_tokens = 512
 
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": "Відповідай українською мовою, коротко і зрозуміло."},
+            {"role": "system", "content": "Відповідай українською мовою, коротко і зрозуміло на основі наведеного контексту."},
             {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
         ],
-        "temperature": 0.7,
+        "temperature": 0.6,
         "max_tokens": max_tokens
     }
 
@@ -36,74 +34,80 @@ def get_answer_from_llama(query, context):
         response = requests.post(url, json=payload, headers=headers, timeout=20)
 
         if response.status_code != 200:
-            error_text = response.text.replace("\n", " ")[:200]
-            return f"Groq помилка {response.status_code}: {error_text}"
+            return f"Groq помилка {response.status_code}: {response.text[:200]}"
 
         data = response.json()
 
-        if "choices" in data and len(data["choices"]) > 0:
-            msg = data["choices"][0]
-            if "message" in msg and "content" in msg["message"]:
-                return msg["message"]["content"].strip()
+        if "choices" in data and data["choices"]:
+            return data["choices"][0]["message"]["content"].strip()
 
-        return f"Невідомий формат відповіді від моделі:\n{str(data)[:500]}"
+        return "Невідомий формат відповіді"
 
-    except requests.exceptions.Timeout:
-        return "Таймаут: модель не відповідає надто довго. Спробуй ще раз."
-    except requests.exceptions.ConnectionError:
-        return "Не вдалося підключитися до Groq. Перевір інтернет або статус https://status.groq.com"
     except Exception as e:
-        return f"Невідома помилка: {str(e)}"
+        return f"Помилка: {str(e)}"
+
 
 @st.cache_resource
 def get_db_and_model():
-    db = lancedb.connect('./data/lancedb')
-
-    print(db.table_names())
+    db = lancedb.connect("./data/lancedb")
     table = db.open_table("the_batch")
     model = SentenceTransformer("all-MiniLM-L6-v2")
+
     return table, model
+
 
 table, model = get_db_and_model()
 
-query = st.chat_input("Твоє питання", key="query")
+query = st.chat_input("Введіть питання...")
 
 if query:
-    with st.spinner("Шукаємо...") and st.chat_message('user'):
+    with st.spinner("🔍 Шукаю релевантну статтю..."):
         query_vec = model.encode(query).tolist()
-        results = table.search(query_vec).limit(4).to_list()
 
-        filtered_results = [r for r in results if r.get('_distance', 1.0) < 0.7]
+        results = table.search(query_vec).limit(5).to_list()
 
-        if not filtered_results:
-            filtered_results = results[:3]
-        results = filtered_results
+        if not results:
+            st.error("Нічого не знайдено")
+            st.stop()
 
-        context = ""
-        all_images = []
-        for r in results:
-            context += f"### {r['title']}\n{r['text']}\n\n"
-            all_images.extend(r['images'][:2])
+        best_article = min(results, key=lambda x: x.get("_distance", 1))
+
+        title = best_article.get("title", "Без назви")
+        text = best_article.get("text", "")
+        images = best_article.get("images", [])[:3]
+        url = best_article.get("url", "#")
+        date = best_article.get("date", "Невідома дата")
+        score = round(1 - best_article.get("_distance", 1), 3)
+
+        context = f"""
+            Назва: {title}
+            Дата: {date}
+
+            Текст статті:
+            {text}
+            """
 
         answer = get_answer_from_llama(query, context)
 
-        st.write(answer)
+    st.chat_message("user").write(query)
+    st.chat_message("assistant").write(answer)
 
-        st.write("**Джерела та зображення**")
-        cols = st.columns(3)
-        for i, img_url in enumerate(all_images):
-            if i >= 6: break
+    if images:
+        st.subheader("🖼 Зображення зі статті")
+        cols = st.columns(len(images))
+
+        for i, img_url in enumerate(images):
             try:
                 response = requests.get(img_url, timeout=5)
                 img = Image.open(BytesIO(response.content))
-
-                result_idx = i // 2
-                cols[i % 3].image(img, use_container_width=True, caption=f"з '{results[result_idx]['title'][:50]}...'")
+                cols[i].image(img, use_container_width=True, caption=title[:40])
             except:
-                cols[i % 3].image(img_url, use_column_width=True)
+                cols[i].image(img_url, use_container_width=True)
 
-        st.write("**Статті**")
-        for r in results[:3]:
-            st.markdown(f"**[{r['title']}]({r['url']})** — {r['date']}")
-            with st.expander("Читати фрагмент"):
-                st.write(r['text'][:500] + "..." if len(r['text']) > 500 else r['text'])
+    st.subheader("📄 Джерело відповіді")
+    st.markdown(f"**[{title}]({url})**")
+    st.write(f"Дата: {date}")
+    st.write(f"Релевантність: {score * 100}%")
+
+    with st.expander("📖 Читати фрагмент статті"):
+        st.write(text[:1000] + "..." if len(text) > 1000 else text)
