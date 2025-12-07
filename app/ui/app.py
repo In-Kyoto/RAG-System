@@ -107,17 +107,18 @@ if query:
     best_article = None
     results = []
 
-    if images and got_result:
-        st.subheader("🖼 Зображення зі статті")
-        cols = st.columns(len(images))
+    if got_result:
+        if images:
+            st.subheader("🖼 Зображення зі статті")
+            cols = st.columns(len(images))
 
-        for i, img_url in enumerate(images):
-            try:
-                response = requests.get(img_url, timeout=5)
-                img = Image.open(BytesIO(response.content))
-                cols[i].image(img, use_container_width=True, caption=title[:40])
-            except:
-                cols[i].image(img_url, use_container_width=True)
+            for i, img_url in enumerate(images):
+                try:
+                    response = requests.get(img_url, timeout=5)
+                    img = Image.open(BytesIO(response.content))
+                    cols[i].image(img, use_container_width=True, caption=title[:40])
+                except:
+                    cols[i].image(img_url, use_container_width=True)
 
         st.subheader("📄 Джерело відповіді")
         st.markdown(f"**[{title}]({url})**")
