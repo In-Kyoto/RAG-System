@@ -73,7 +73,7 @@ if query:
             st.error("Нічого не знайдено")
             st.stop()
 
-        filtered_results = [r for r in results if r.get('_distance', 1.0) < 0.6]
+        filtered_results = [r for r in results if r.get('_distance', 1.0) < 0.5]
 
         if not filtered_results:
             got_result = False
