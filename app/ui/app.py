@@ -20,8 +20,9 @@ def get_answer_from_llama(query, context):
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": "Відповідай українською мовою, коротко і зрозуміло на основі наведеного контексту."},
+            {"role": "system", "content": "Відповідай ТІЛЬКИ на основі наданого контексту. Якщо у контексті немає відповіді — скажи: 'У статтях немає інформації для відповіді на це питання'."},
             {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
+
         ],
         "temperature": 0.6,
         "max_tokens": max_tokens
@@ -68,8 +69,14 @@ if query:
 
         results = table.search(query_vec).limit(5).to_list()
 
-        if not results:
+        filtered_results = [r for r in results if r.get('_distance', 1.0) < 0.6]
+
+        if not filtered_results:
             got_result = False
+            st.warning("У базі знань немає релевантної статті до вашого питання")
+            st.stop()
+
+        if not results:
             st.error("Нічого не знайдено")
             st.stop()
 
