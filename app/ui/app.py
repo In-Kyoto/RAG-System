@@ -92,6 +92,10 @@ if query:
     st.chat_message("user").write(query)
     st.chat_message("assistant").write(answer)
 
+    context = ""
+    best_article = None
+    results = []
+
     if images:
         st.subheader("🖼 Зображення зі статті")
         cols = st.columns(len(images))
@@ -111,3 +115,5 @@ if query:
 
     with st.expander("📖 Читати фрагмент статті"):
         st.write(text[:1000] + "..." if len(text) > 1000 else text)
+
+    images = []

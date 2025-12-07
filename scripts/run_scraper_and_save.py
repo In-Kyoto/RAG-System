@@ -11,7 +11,7 @@ if __name__ == "__main__":
         div.postContent.wgtc h2, 
         div.postContent.wgtc h3, 
         div.postContent.wgtc li, 
-        article p
+        article em
     """.replace("\n", "").strip()
     title_selector = "h1, h2:first-of-type"
     date_selector = "time, .date, span[datetime]"
