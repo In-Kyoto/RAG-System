@@ -69,35 +69,36 @@ if query:
 
         results = table.search(query_vec).limit(5).to_list()
 
+        if not results:
+            st.error("Нічого не знайдено")
+            st.stop()
+
         filtered_results = [r for r in results if r.get('_distance', 1.0) < 0.6]
 
         if not filtered_results:
             got_result = False
             st.warning("У базі знань немає релевантної статті до вашого питання")
-            st.stop()
+            answer = ""
 
-        if not results:
-            st.error("Нічого не знайдено")
-            st.stop()
+        else:
+            best_article = min(results, key=lambda x: x.get("_distance", 1))
 
-        best_article = min(results, key=lambda x: x.get("_distance", 1))
+            title = best_article.get("title", "Без назви")
+            text = best_article.get("text", "")
+            images = best_article.get("images", [])[:3]
+            url = best_article.get("url", "#")
+            date = best_article.get("date", "Невідома дата")
+            score = round(1 - best_article.get("_distance", 1), 3)
 
-        title = best_article.get("title", "Без назви")
-        text = best_article.get("text", "")
-        images = best_article.get("images", [])[:3]
-        url = best_article.get("url", "#")
-        date = best_article.get("date", "Невідома дата")
-        score = round(1 - best_article.get("_distance", 1), 3)
+            context = f"""
+                Назва: {title}
+                Дата: {date}
+    
+                Текст статті:
+                {text}
+                """
 
-        context = f"""
-            Назва: {title}
-            Дата: {date}
-
-            Текст статті:
-            {text}
-            """
-
-        answer = get_answer_from_llama(query, context)
+            answer = get_answer_from_llama(query, context)
 
     st.chat_message("user").write(query)
     st.chat_message("assistant").write(answer)
