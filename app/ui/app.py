@@ -6,8 +6,30 @@ from PIL import Image
 import requests
 from io import BytesIO
 
+API_KEY = st.secrets["API"]
+
+
 st.set_page_config(page_title="RAG System", layout="wide")
 st.title("Multimodal RAG")
+
+def get_answer_from_llama(query, context):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {"role": "system", "content": "Дай коротку зрозумілу відповідь українською мовою, максимум 250 слів."},
+            {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 500
+    }
+
+    response = requests.post(url, headers=headers, json=payload, timeout=25)
+    return response.json()["choices"][0]["message"]["content"]
 
 @st.cache_resource
 def get_db_and_model():
@@ -39,15 +61,7 @@ if query:
             context += f"### {r['title']}\n{r['text']}\n\n"
             all_images.extend(r['images'][:2])
 
-        response = ollama.generate(
-            model="llama3.1:8b",
-            prompt=f"Дай коротку зрозумілу відповідь українською (максимум 300 слів), тільки за цим контекстом:\n\n{context}\n\nПитання: {query}",
-            options={
-                "num_predict": 400,
-                "temperature": 0.7,
-                "top_p": 0.9
-            }
-        )
+        response = get_answer_from_llama(query, context)
         answer = response["response"].strip()
 
         st.write(answer)
