@@ -61,8 +61,7 @@ if query:
             context += f"### {r['title']}\n{r['text']}\n\n"
             all_images.extend(r['images'][:2])
 
-        response = get_answer_from_llama(query, context)
-        answer = response["response"].strip()
+        answer = get_answer_from_llama(query, context)
 
         st.write(answer)
 
