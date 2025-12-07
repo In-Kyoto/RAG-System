@@ -78,10 +78,10 @@ if query:
         if not filtered_results:
             got_result = False
             st.warning("У базі знань немає релевантної статті до вашого питання")
-            answer = ""
+            answer = "У статтях немає інформації для відповіді на це питання"
 
         else:
-            best_article = min(results, key=lambda x: x.get("_distance", 1))
+            best_article = min(filtered_results, key=lambda x: x.get("_distance", 1))
 
             title = best_article.get("title", "Без назви")
             text = best_article.get("text", "")
@@ -91,21 +91,21 @@ if query:
             score = round(1 - best_article.get("_distance", 1), 3)
 
             context = f"""
-                Назва: {title}
-                Дата: {date}
-    
-                Текст статті:
-                {text}
-                """
+            Назва: {title}
+            Дата: {date}
+
+            Текст статті:
+            {text}
+            """
 
             answer = get_answer_from_llama(query, context)
+
+            if "немає інформації" in answer.lower():
+                got_result = False
 
     st.chat_message("user").write(query)
     st.chat_message("assistant").write(answer)
 
-    context = ""
-    best_article = None
-    results = []
 
     if got_result:
         if images:
@@ -128,5 +128,8 @@ if query:
         with st.expander("📖 Читати фрагмент статті"):
             st.write(text[:1000] + "..." if len(text) > 1000 else text)
 
-    images = []
-    got_result = True
+    # images = []
+    # got_result = True
+    # context = ""
+    # best_article = None
+    # results = []
