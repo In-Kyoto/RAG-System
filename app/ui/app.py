@@ -6,9 +6,11 @@ from PIL import Image
 from io import BytesIO
 
 API_KEY = st.secrets["GROQ_API_KEY"]
+got_result = True
 
 st.set_page_config(page_title="Multimodal RAG", layout="wide")
 st.title("Multimodal RAG System")
+
 
 def get_answer_from_llama(query, context):
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -67,6 +69,7 @@ if query:
         results = table.search(query_vec).limit(5).to_list()
 
         if not results:
+            got_result = False
             st.error("Нічого не знайдено")
             st.stop()
 
@@ -96,7 +99,7 @@ if query:
     best_article = None
     results = []
 
-    if images:
+    if images and got_result:
         st.subheader("🖼 Зображення зі статті")
         cols = st.columns(len(images))
 
@@ -108,12 +111,13 @@ if query:
             except:
                 cols[i].image(img_url, use_container_width=True)
 
-    st.subheader("📄 Джерело відповіді")
-    st.markdown(f"**[{title}]({url})**")
-    st.write(f"Дата: {date}")
-    st.write(f"Релевантність: {score * 100}%")
+        st.subheader("📄 Джерело відповіді")
+        st.markdown(f"**[{title}]({url})**")
+        st.write(f"Дата: {date}")
+        st.write(f"Релевантність: {score * 100}%")
 
-    with st.expander("📖 Читати фрагмент статті"):
-        st.write(text[:1000] + "..." if len(text) > 1000 else text)
+        with st.expander("📖 Читати фрагмент статті"):
+            st.write(text[:1000] + "..." if len(text) > 1000 else text)
 
     images = []
+    got_result = True
