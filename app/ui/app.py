@@ -54,8 +54,9 @@ if query:
         query_vec = model.encode(query).tolist()
 
         results = table.search(query_vec).limit(8).to_list()
-        results = [r for r in results if r["_distance"] < 0.78]
-        results = sorted(results, key=lambda x: x["_distance"])[:5]
+        # results = [r for r in results if r["_distance"] < 0.85]
+        # results = sorted(results, key=lambda x: x["_distance"])[:5]
+        results = results[:5]
 
         if not results:
             st.error("Нічого не знайдено")
@@ -92,8 +93,6 @@ if query:
 
         st.subheader("📄 Джерело відповіді")
         st.markdown(f"**[{title}]({url})**")
-        st.write(f"Дата: {date}")
-        st.write(f"Релевантність: {score * 100}%")
 
         with st.expander("📖 Читати фрагмент статті"):
             st.write(text[:1000] + "..." if len(text) > 1000 else text)
