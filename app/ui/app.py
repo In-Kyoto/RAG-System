@@ -14,46 +14,26 @@ st.title("Multimodal RAG System")
 
 def get_answer_from_llama(query, context):
     url = "https://api.groq.com/openai/v1/chat/completions"
-    model = "llama-3.1-8b-instant"
-    max_tokens = 512
-
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": """
-                Ти — точний і чесний асистент. Відповідай ТІЛЬКИ українською мовою.
-                
-               Дай коротку зрозумілу відповідь українською, тільки за контекстом
-                Ніколи не вигадуй факти і не додавай нічого зайвого.
-                """
-            },
-            {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
-
-        ],
-        "temperature": 0.3,
-        "max_tokens": max_tokens
-    }
 
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {"role": "system", "content": "Дай коротку зрозумілу відповідь українською мовою, максимум 250 слів."},
+            {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
+        ],
 
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=20)
 
-        if response.status_code != 200:
-            return f"Groq помилка {response.status_code}: {response.text[:200]}"
+        "temperature": 0.7,
+        "max_tokens": 500
+    }
 
-        data = response.json()
+    response = requests.post(url, headers=headers, json=payload, timeout=25)
 
-        if "choices" in data and data["choices"]:
-            return data["choices"][0]["message"]["content"].strip()
-
-        return "Невідомий формат відповіді"
-
-    except Exception as e:
-        return f"Помилка: {str(e)}"
+    return response.json()["choices"][0]["message"]["content"]
 
 
 @st.cache_resource
@@ -73,7 +53,7 @@ if query:
     with st.spinner("🔍 Шукаю релевантну статтю..."):
         query_vec = model.encode(query).tolist()
 
-        results = table.search(query_vec).limit(5).to_list()
+        results = table.search(query_vec).limit(8).to_list()
 
         if not results:
             st.error("Нічого не знайдено")
