@@ -31,7 +31,7 @@ def get_answer_from_llama(query, context):
             {"role": "user", "content": f"Контекст:\n{context}\n\nПитання: {query}"}
 
         ],
-        "temperature": 0.6,
+        "temperature": 0.8,
         "max_tokens": max_tokens
     }
 
