@@ -54,33 +54,24 @@ if query:
         query_vec = model.encode(query).tolist()
 
         results = table.search(query_vec).limit(8).to_list()
+        results = [r for r in results if r["_distance"] < 0.78]
+        results = sorted(results, key=lambda x: x["_distance"])[:5]
 
         if not results:
             st.error("Нічого не знайдено")
             st.stop()
 
+        for i, r in enumerate(results, 1):
+            title = r.get("title", "Без назви")
+            date = r.get("date", "невідомо")
+            text = r.get("text", "")[:1100] + ("..." if len(r.get("text", "")) > 1100 else "")
 
-        best_article = min(results, key=lambda x: x.get("_distance", 1))
+            context_parts.append(f"Стаття {i}: {title} ({date})\n{text}\n")
 
-        title = best_article.get("title", "Без назви")
-        text = best_article.get("text", "")
-        images = best_article.get("images", [])[:3]
-        url = best_article.get("url", "#")
-        date = best_article.get("date", "Невідома дата")
-        score = round(1 - best_article.get("_distance", 1), 3)
-
-        context = f"""
-            Назва: {title}
-            Дата: {date}
-
-            Текст статті:
-            {text}
-            """
+        context_parts.append(f"\nПитання ще раз: {query}")
+        context = "\n".join(context_parts)
 
         answer = get_answer_from_llama(query, context)
-
-        if "немає інформації" in answer.lower():
-            got_result = False
 
     st.chat_message("user").write(query)
     st.chat_message("assistant").write(answer)
