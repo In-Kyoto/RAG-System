@@ -62,17 +62,22 @@ if query:
             st.error("Нічого не знайдено")
             st.stop()
 
-        context_parts = []
+        context_parts = [f"Питання: {query}\n"]
+        all_images = []
 
         for i, r in enumerate(results, 1):
             title = r.get("title", "Без назви")
             date = r.get("date", "невідомо")
             text = r.get("text", "")[:1100] + ("..." if len(r.get("text", "")) > 1100 else "")
+            images = r.get("images", [])[:2]
 
             context_parts.append(f"Стаття {i}: {title} ({date})\n{text}\n")
+            all_images.extend(images)
 
         context_parts.append(f"\nПитання ще раз: {query}")
         context = "\n".join(context_parts)
+
+        all_images = all_images[:3]
 
         answer = get_answer_from_llama(query, context)
 
@@ -81,22 +86,35 @@ if query:
 
 
     if got_result:
-        if images:
-            st.subheader("🖼 Зображення зі статті")
-            cols = st.columns(len(images))
-
-            for i, img_url in enumerate(images):
+        if all_images:
+            st.subheader("Зображення з релевантних статей")
+            cols = st.columns(3)
+            for idx, img_url in enumerate(all_images):
+                col = cols[idx % 3]
                 try:
-                    response = requests.get(img_url, timeout=5)
-                    img = Image.open(BytesIO(response.content))
-                    cols[i].image(img, use_container_width=True, caption=title[:40])
+                    response = requests.get(img_url, timeout=8)
+                    if response.status_code == 200:
+                        img = Image.open(BytesIO(response.content))
+                        col.image(img, use_container_width=True)
+                    else:
+                        col.image("https://via.placeholder.com/400x300?text=Зображення+недоступне",
+                                  use_container_width=True)
                 except:
-                    cols[i].image(img_url, use_container_width=True)
+                    col.image("https://via.placeholder.com/400x300?text=Помилка+завантаження", use_container_width=True)
 
-        st.subheader("📄 Джерело відповіді")
-        st.markdown(f"**[{title}]({url})**")
+        st.subheader("Джерела")
+        for idx, r in enumerate(results, 1):
+            title = r.get("title", "Без назви")
+            url = r.get("url", "#")
+            date = r.get("date", "невідомо")
+            score = round(1 - r["_distance"], 3)
 
-        with st.expander("📖 Читати фрагмент статті"):
-            st.write(text[:1000] + "..." if len(text) > 1000 else text)
+            with st.expander(f"{idx}. {title} — {date} (релевантність: {score:.1%})"):
+                st.markdown(f"**Посилання:** [{title}]({url})")
+                st.caption(f"Релевантність: {score:.1%} | Дата: {date}")
+                preview = r.get("text", "")[:600]
+                if len(r.get("text", "")) > 600:
+                    preview += "..."
+                st.write(preview)
 
     got_result = True
