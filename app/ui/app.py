@@ -121,8 +121,8 @@ if query:
         with st.expander("📖 Читати фрагмент статті"):
             st.write(text[:1000] + "..." if len(text) > 1000 else text)
 
-    # images = []
-    # got_result = True
-    # context = ""
-    # best_article = None
-    # results = []
+    images = []
+    got_result = True
+    context = ""
+    best_article = None
+    results = []
