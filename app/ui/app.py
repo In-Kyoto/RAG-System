@@ -62,6 +62,8 @@ if query:
             st.error("Нічого не знайдено")
             st.stop()
 
+        contex_parts = []
+
         for i, r in enumerate(results, 1):
             title = r.get("title", "Без назви")
             date = r.get("date", "невідомо")
